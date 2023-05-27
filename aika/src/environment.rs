@@ -1,7 +1,7 @@
+use crate::process::Process;
 use std::cell::RefCell;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
-use crate::process::Process;
 
 pub struct Event {
     pub time: u64,

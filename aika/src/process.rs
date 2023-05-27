@@ -127,7 +127,12 @@ pub struct StandardRandom {
 }
 
 impl StandardRandom {
-    pub fn new(process_id: u16, process_name: String, process: fn(), execution_distribution: Box<dyn Distribution>) -> Self {
+    pub fn new(
+        process_id: u16,
+        process_name: String,
+        process: fn(),
+        execution_distribution: Box<dyn Distribution>,
+    ) -> Self {
         StandardRandom {
             process_id: process_id,
             process_name: process_name,
@@ -178,7 +183,14 @@ pub struct FixedRandom {
 }
 
 impl FixedRandom {
-    pub fn new(process_id: u16, process_name: String, process: fn(), execution_distribution: Box<dyn Distribution>, process_start_event: u64, process_end_event: u64) -> Self {
+    pub fn new(
+        process_id: u16,
+        process_name: String,
+        process: fn(),
+        execution_distribution: Box<dyn Distribution>,
+        process_start_event: u64,
+        process_end_event: u64,
+    ) -> Self {
         FixedRandom {
             process_id: process_id,
             process_name: process_name,
