@@ -1,0 +1,38 @@
+on: [push]
+name: Rust
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v3
+      
+    - name: cargo test
+      run: cargo test --all --all-features
+      
+  lint: 
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v3
+      
+    - name: Install toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        profile: minimal
+        components: rustfmt, clippy
+        override: true
+        
+    - name: cargo fmt
+      run: cargo +nightly fmt --all -- --check
+      
+    - name: cargo clippy
+      run: cargo clippy -- -A clippy::module_inception
