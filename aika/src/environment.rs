@@ -1,13 +1,10 @@
+use crate::distribution::Distribution;
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
 use std::ops::{Generator, GeneratorState};
 use std::pin::Pin;
 
 pub type Process<T> = Box<dyn Generator<Yield = T, Return = ()> + Unpin>;
-
-pub trait Distribution {
-    fn sample(&self) -> f64;
-}
 
 pub struct Event {
     pub time: u64,
@@ -40,16 +37,18 @@ pub struct Environment<T> {
     pub curr_event: u64,
     pub max_event: u64,
     pub state_chain: Vec<T>,
+    pub seed: u64,
 }
 
 impl<T> Environment<T> {
-    pub fn new(max_event: u64) -> Self {
+    pub fn new(max_event: u64, seed: u64) -> Self {
         Environment {
             events: BinaryHeap::new(),
             processes: HashMap::new(),
             curr_event: 0,
             max_event: max_event,
             state_chain: Vec::new(),
+            seed: seed,
         }
     }
 
@@ -64,7 +63,7 @@ impl<T> Environment<T> {
         self.processes.insert(id, process);
         self.init_process(id);
     }
-    
+
     pub fn init_process(&mut self, id: usize) {
         let process = self.processes.get(&id).unwrap();
         match process.process_duration {
@@ -87,15 +86,15 @@ impl<T> Environment<T> {
         let sim_process = self.processes.get_mut(&process_id).unwrap();
         let process = Pin::new(&mut sim_process.process);
         let time_delta: u64;
-        match sim_process.time_delta {
+        match &sim_process.time_delta {
             ProcessExecution::Constant(delta) => {
-                time_delta = delta;
+                time_delta = *delta;
             }
             ProcessExecution::Deterministic(events_path) => {
                 time_delta = events_path(self.curr_event);
             }
             ProcessExecution::Stochastic(distribution_sample) => {
-                time_delta = distribution_sample().round() as u64;
+                time_delta = distribution_sample.sample(self.seed).round() as u64;
             }
         }
         match process.resume(()) {
@@ -114,7 +113,7 @@ impl<T> Environment<T> {
                 self.step();
             }
         } else {
-            panic!("Environment has already reached max_event");
+            println!("✅ Simulation complete ✅");
         }
     }
 
@@ -132,7 +131,7 @@ impl<T> Environment<T> {
 pub enum ProcessExecution {
     Constant(u64),
     Deterministic(fn(u64) -> u64),
-    Stochastic(fn() -> f64),
+    Stochastic(Box<dyn Distribution>),
 }
 
 pub enum ProcessDuration {
