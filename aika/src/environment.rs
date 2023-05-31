@@ -39,6 +39,7 @@ pub struct Environment<T> {
     pub processes: HashMap<usize, SimProcess<T>>,
     pub curr_event: u64,
     pub max_event: u64,
+    pub state_chain: Vec<T>,
 }
 
 impl<T> Environment<T> {
@@ -48,6 +49,7 @@ impl<T> Environment<T> {
             processes: HashMap::new(),
             curr_event: 0,
             max_event: max_event,
+            state_chain: Vec::new(),
         }
     }
 
@@ -80,8 +82,9 @@ impl<T> Environment<T> {
             }
         }
         match process.resume(()) {
-            GeneratorState::Yielded(_val) => {
+            GeneratorState::Yielded(val) => {
                 self.add_events(process_id, time_delta);
+                self.state_chain.push(val);
                 self.curr_event += 1;
             }
             GeneratorState::Complete(_output) => {}
