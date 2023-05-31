@@ -62,7 +62,9 @@ impl<T> Environment<T> {
         let id = self.processes.len();
         let process = SimProcess::new(process, time_delta, process_duration);
         self.processes.insert(id, process);
+        self.init_process(id);
     }
+    
     pub fn init_process(&mut self, id: usize) {
         let process = self.processes.get(&id).unwrap();
         match process.process_duration {
@@ -107,9 +109,6 @@ impl<T> Environment<T> {
     }
 
     pub fn run(&mut self) {
-        //for id in ids {
-        //    self.init_process(*id);
-        //}
         if self.curr_event < self.max_event {
             while !self.events.is_empty() {
                 self.step();
