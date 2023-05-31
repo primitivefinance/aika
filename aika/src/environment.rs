@@ -57,13 +57,28 @@ impl<T> Environment<T> {
         &mut self,
         process: Box<dyn Generator<Yield = T, Return = ()> + Unpin>,
         time_delta: ProcessExecution,
+        process_duration: ProcessDuration,
     ) {
         let id = self.processes.len();
-        let process = SimProcess::new(process, time_delta);
+        let process = SimProcess::new(process, time_delta, process_duration);
         self.processes.insert(id, process);
     }
+    pub fn init_process(&mut self, id: usize) {
+        let process = self.processes.get(&id).unwrap();
+        match process.process_duration {
+            ProcessDuration::Standard => {
+                self.add_events(id, 0);
+            }
+            ProcessDuration::Infinite(start) => {
+                self.add_events(id, start);
+            }
+            ProcessDuration::Finite(start, _end) => {
+                self.add_events(id, start);
+            }
+        }
+    }
 
-    pub fn run(&mut self) {
+    pub fn step(&mut self) {
         let event = self.events.pop().unwrap().0;
         let process_id = event.process_id;
         self.curr_event = event.time;
@@ -91,6 +106,19 @@ impl<T> Environment<T> {
         }
     }
 
+    pub fn run(&mut self) {
+        //for id in ids {
+        //    self.init_process(*id);
+        //}
+        if self.curr_event < self.max_event {
+            while !self.events.is_empty() {
+                self.step();
+            }
+        } else {
+            panic!("Environment has already reached max_event");
+        }
+    }
+
     pub fn add_events(&mut self, id: usize, time_delta: u64) {
         if self.curr_event + time_delta > self.max_event {
             return;
@@ -108,17 +136,28 @@ pub enum ProcessExecution {
     Stochastic(fn() -> f64),
 }
 
+pub enum ProcessDuration {
+    Standard,
+    Infinite(u64),
+    Finite(u64, u64),
+}
+
 pub struct SimProcess<T> {
     process: Process<T>,
     time_delta: ProcessExecution,
+    process_duration: ProcessDuration,
 }
 
 impl<T> SimProcess<T> {
-    fn new(process: Process<T>, time_delta: ProcessExecution) -> Self {
+    fn new(
+        process: Process<T>,
+        time_delta: ProcessExecution,
+        process_duration: ProcessDuration,
+    ) -> Self {
         SimProcess {
             process: process,
             time_delta: time_delta,
+            process_duration: process_duration,
         }
     }
 }
-
