@@ -5,6 +5,10 @@ use std::pin::Pin;
 
 pub type Process<T> = Box<dyn Generator<Yield = T, Return = ()> + Unpin>;
 
+pub trait Distribution {
+    fn sample(&self) -> f64;
+}
+
 pub struct Event {
     pub time: u64,
     pub process_id: usize,
@@ -50,7 +54,7 @@ impl<T> Environment<T> {
     pub fn add_process(
         &mut self,
         process: Box<dyn Generator<Yield = T, Return = ()> + Unpin>,
-        time_delta: fn(u64) -> u64,
+        time_delta: ProcessExecution,
     ) {
         let id = self.processes.len();
         let process = SimProcess::new(process, time_delta);
@@ -63,7 +67,18 @@ impl<T> Environment<T> {
         self.curr_event = event.time;
         let sim_process = self.processes.get_mut(&process_id).unwrap();
         let process = Pin::new(&mut sim_process.process);
-        let time_delta = (sim_process.time_delta)(self.curr_event);
+        let time_delta: u64;
+        match sim_process.time_delta {
+            ProcessExecution::Constant(delta) => {
+                time_delta = delta;
+            }
+            ProcessExecution::Deterministic(events_path) => {
+                time_delta = events_path(self.curr_event);
+            }
+            ProcessExecution::Stochastic(distribution_sample) => {
+                time_delta = distribution_sample().round() as u64;
+            }
+        }
         match process.resume(()) {
             GeneratorState::Yielded(_val) => {
                 self.add_events(process_id, time_delta);
@@ -84,16 +99,23 @@ impl<T> Environment<T> {
     }
 }
 
+pub enum ProcessExecution {
+    Constant(u64),
+    Deterministic(fn(u64) -> u64),
+    Stochastic(fn() -> f64),
+}
+
 pub struct SimProcess<T> {
     process: Process<T>,
-    time_delta: fn(u64) -> u64,
+    time_delta: ProcessExecution,
 }
 
 impl<T> SimProcess<T> {
-    fn new(process: Process<T>, time_delta: fn(u64) -> u64) -> Self {
+    fn new(process: Process<T>, time_delta: ProcessExecution) -> Self {
         SimProcess {
             process: process,
             time_delta: time_delta,
         }
     }
 }
+
