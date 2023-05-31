@@ -47,7 +47,11 @@ impl<T> Environment<T> {
         }
     }
 
-    pub fn add_process(&mut self, process: Box<dyn Generator<Yield = T, Return = ()> + Unpin>, time_delta: fn(u64) -> u64) {
+    pub fn add_process(
+        &mut self,
+        process: Box<dyn Generator<Yield = T, Return = ()> + Unpin>,
+        time_delta: fn(u64) -> u64,
+    ) {
         let id = self.processes.len();
         let process = SimProcess::new(process, time_delta);
         self.processes.insert(id, process);
@@ -87,6 +91,9 @@ pub struct SimProcess<T> {
 
 impl<T> SimProcess<T> {
     fn new(process: Process<T>, time_delta: fn(u64) -> u64) -> Self {
-        SimProcess { process: process, time_delta: time_delta}
+        SimProcess {
+            process: process,
+            time_delta: time_delta,
+        }
     }
 }
