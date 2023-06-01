@@ -21,14 +21,14 @@ mod test {
             }
         });
         // Execution Distribution
-        let poisson = Poisson::new(11.0);
+        let gamma = Gamma::new(7.0, 1.0);
 
         env.add_process(
             process_random,
-            ProcessExecution::Stochastic(Box::new(poisson)),
-            ProcessDuration::Standard,
+            ProcessExecution::Stochastic(Box::new(gamma)),
+            ProcessDuration::Finite(30, 60),
         );
         env.run();
-        println!("{:?}", env.state_chain);
+        println!("{:?}", env.stores);
     }
 }
