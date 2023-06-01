@@ -1,3 +1,5 @@
+use rand::SeedableRng;
+
 use crate::distribution::Distribution;
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
@@ -36,8 +38,8 @@ pub struct Environment<T> {
     pub processes: HashMap<usize, SimProcess<T>>,
     pub curr_event: u64,
     pub max_event: u64,
-    pub state_chain: Vec<T>,
-    pub seed: u64,
+    pub stores: Vec<(u64, T)>,
+    pub rng: rand::rngs::StdRng,
 }
 
 impl<T> Environment<T> {
@@ -47,8 +49,8 @@ impl<T> Environment<T> {
             processes: HashMap::new(),
             curr_event: 0,
             max_event: max_event,
-            state_chain: Vec::new(),
-            seed: seed,
+            stores: Vec::new(),
+            rng: rand::rngs::StdRng::seed_from_u64(seed),
         }
     }
 
@@ -84,6 +86,14 @@ impl<T> Environment<T> {
         let process_id = event.process_id;
         self.curr_event = event.time;
         let sim_process = self.processes.get_mut(&process_id).unwrap();
+        match sim_process.process_duration {
+            ProcessDuration::Finite(_start, end) => {
+                if self.curr_event >= end {
+                    return;
+                }
+            }
+            _ => {}
+        }
         let process = Pin::new(&mut sim_process.process);
         let time_delta: u64;
         match &sim_process.time_delta {
@@ -94,13 +104,13 @@ impl<T> Environment<T> {
                 time_delta = events_path(self.curr_event);
             }
             ProcessExecution::Stochastic(distribution_sample) => {
-                time_delta = distribution_sample.sample(self.seed).round() as u64;
+                time_delta = distribution_sample.sample(&mut self.rng).round() as u64;
             }
         }
         match process.resume(()) {
             GeneratorState::Yielded(val) => {
                 self.add_events(process_id, time_delta);
-                self.state_chain.push(val);
+                self.stores.push((self.curr_event, val));
                 self.curr_event += 1;
             }
             GeneratorState::Complete(_output) => {}

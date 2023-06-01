@@ -1,8 +1,8 @@
-use rand::{Rng, SeedableRng};
+use rand::Rng;
 use rand_distr::{Gamma as GammaDistribution, Poisson as PoissonDistribution};
 
 pub trait Distribution {
-    fn sample(&self, seed: u64) -> f64;
+    fn sample(&self, rng: &mut rand::rngs::StdRng) -> f64;
 }
 
 pub struct Poisson {
@@ -18,8 +18,7 @@ impl Poisson {
 }
 
 impl Distribution for Poisson {
-    fn sample(&self, seed: u64) -> f64 {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+    fn sample(&self, rng: &mut rand::rngs::StdRng) -> f64 {
         rng.sample(self.distribution)
     }
 }
@@ -37,8 +36,7 @@ impl Gamma {
 }
 
 impl Distribution for Gamma {
-    fn sample(&self, seed: u64) -> f64 {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+    fn sample(&self, rng: &mut rand::rngs::StdRng) -> f64 {
         rng.sample(self.distribution)
     }
 }
