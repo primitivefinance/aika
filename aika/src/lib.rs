@@ -26,7 +26,7 @@ mod test {
         env.add_process(
             process_random,
             ProcessExecution::Stochastic(Box::new(gamma)),
-            ProcessDuration::Finite(30, 60)
+            ProcessDuration::Finite(30, 60),
         );
         env.run();
         println!("{:?}", env.stores);
