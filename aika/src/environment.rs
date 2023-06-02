@@ -7,7 +7,7 @@ use rand::SeedableRng;
 
 use crate::distribution::Distribution;
 use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BTreeMap, BinaryHeap, HashMap};
 use std::ops::{Generator, GeneratorState};
 use std::pin::Pin;
 
@@ -95,7 +95,7 @@ pub struct Environment<T> {
     /// The maximum event time.
     pub max_event: u64,
     /// The stores of the simulation yield.
-    pub stores: Vec<(u64, T)>,
+    pub stores: BTreeMap<u64, T>,
     /// Seeded random number generator for optional randomness.
     pub rng: rand::rngs::StdRng,
 }
@@ -108,7 +108,7 @@ impl<T> Environment<T> {
             processes: HashMap::new(),
             curr_event: 0,
             max_event: max_event,
-            stores: Vec::new(),
+            stores: BTreeMap::new(),
             rng: rand::rngs::StdRng::seed_from_u64(seed),
         }
     }
@@ -172,7 +172,7 @@ impl<T> Environment<T> {
         match process.resume(()) {
             GeneratorState::Yielded(val) => {
                 self.add_events(process_id, time_delta);
-                self.stores.push((self.curr_event, val));
+                self.stores.insert(self.curr_event, val);
                 self.curr_event += 1;
             }
             GeneratorState::Complete(_output) => {}
@@ -186,7 +186,7 @@ impl<T> Environment<T> {
                 self.step();
             }
         } else {
-            println!("✅ Simulation complete ✅");
+            return;
         }
     }
 
