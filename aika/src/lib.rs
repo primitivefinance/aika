@@ -2,6 +2,7 @@
 
 pub mod distribution;
 pub mod environment;
+pub mod manager;
 
 #[cfg(test)]
 mod test {
