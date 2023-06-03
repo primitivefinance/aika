@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::environment::Environment;
 
 /// The `Manager` struct is responsible for running a series of simulations and storing the results.
@@ -7,7 +5,7 @@ pub struct Manager<T: Clone> {
     /// The number of simulations to run.
     pub simulations: Vec<Environment<T>>,
     /// The storage of simulation data
-    pub stores: Vec<BTreeMap<u64, T>>,
+    pub stores: Vec<Vec<(u64, T)>>,
 }
 
 impl<T: Clone> Manager<T> {

@@ -7,7 +7,7 @@ use rand::SeedableRng;
 
 use crate::distribution::Distribution;
 use std::cmp::Reverse;
-use std::collections::{BTreeMap, BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap};
 use std::ops::{Generator, GeneratorState};
 use std::pin::Pin;
 
@@ -83,6 +83,11 @@ impl PartialEq for Event {
 
 impl Eq for Event {}
 
+pub struct State<T> {
+    pub state: T,
+    pub time: u64,
+}
+
 /// The main struct of the library. It contains the `processes`, `events`, and `stores` of the
 /// simulation and keeps track of the current event time.
 pub struct Environment<T> {
@@ -90,25 +95,31 @@ pub struct Environment<T> {
     pub events: BinaryHeap<Reverse<Event>>,
     /// The processes and their id.
     pub processes: HashMap<usize, SimProcess<T>>,
-    /// The current event time.
-    pub curr_event: u64,
-    /// The maximum event time.
-    pub max_event: u64,
     /// The stores of the simulation yield.
-    pub stores: BTreeMap<u64, T>,
+    pub stores: Vec<(u64, T)>,
+    /// The current state of the simulation.
+    pub state: State<T>,
+    /// The current event time.
+    pub time: u64,
+    /// The maximum event time.
+    pub stop: u64,
     /// Seeded random number generator for optional randomness.
     pub rng: rand::rngs::StdRng,
 }
 
 /// Implementation of the Environment struct. Contains public methods `new`, `add_process`, `run`.
 impl<T> Environment<T> {
-    pub fn new(max_event: u64, seed: u64) -> Self {
+    pub fn new(stop: u64, seed: u64, initial_state: T) -> Self {
         Environment {
             events: BinaryHeap::new(),
             processes: HashMap::new(),
-            curr_event: 0,
-            max_event: max_event,
-            stores: BTreeMap::new(),
+            state: State {
+                state: initial_state,
+                time: 0,
+            },
+            time: 0,
+            stop: stop,
+            stores: Vec::new(),
             rng: rand::rngs::StdRng::seed_from_u64(seed),
         }
     }
@@ -146,11 +157,11 @@ impl<T> Environment<T> {
     fn step(&mut self) {
         let event = self.events.pop().unwrap().0;
         let process_id = event.process_id;
-        self.curr_event = event.time;
+        self.time = event.time;
         let sim_process = self.processes.get_mut(&process_id).unwrap();
         match sim_process.process_duration {
             ProcessDuration::Finite(_start, end) => {
-                if self.curr_event >= end {
+                if self.time >= end {
                     return;
                 }
             }
@@ -163,7 +174,7 @@ impl<T> Environment<T> {
                 time_delta = *delta;
             }
             ProcessExecution::Deterministic(events_path) => {
-                time_delta = events_path(self.curr_event);
+                time_delta = events_path(self.time);
             }
             ProcessExecution::Stochastic(distribution_sample) => {
                 time_delta = distribution_sample.sample(&mut self.rng).round() as u64;
@@ -172,8 +183,8 @@ impl<T> Environment<T> {
         match process.resume(()) {
             GeneratorState::Yielded(val) => {
                 self.add_events(process_id, time_delta);
-                self.stores.insert(self.curr_event, val);
-                self.curr_event += 1;
+                self.stores.push((self.time, val));
+                self.time += 1;
             }
             GeneratorState::Complete(_output) => {}
         }
@@ -181,7 +192,7 @@ impl<T> Environment<T> {
 
     /// Run the simulation until the maximum event time is reached.
     pub fn run(&mut self) {
-        if self.curr_event < self.max_event {
+        if self.time < self.stop {
             while !self.events.is_empty() {
                 self.step();
             }
@@ -192,11 +203,11 @@ impl<T> Environment<T> {
 
     /// Add an event to the event queue.
     fn add_events(&mut self, id: usize, time_delta: u64) {
-        if self.curr_event + time_delta > self.max_event {
+        if self.time + time_delta > self.stop {
             return;
         }
         self.events.push(Reverse(Event {
-            time: self.curr_event + time_delta,
+            time: self.time + time_delta,
             process_id: id,
         }));
     }

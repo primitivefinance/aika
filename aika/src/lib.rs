@@ -13,7 +13,7 @@ mod test {
     fn setup_simple_des() {
         let seed = 223u64;
 
-        let mut env = Environment::new(100, seed);
+        let mut env = Environment::new(100, seed, 0);
         let process_random = Box::new(move || {
             let mut i = 0;
             loop {
