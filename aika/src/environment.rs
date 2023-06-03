@@ -12,7 +12,7 @@ use std::ops::{Generator, GeneratorState};
 use std::pin::Pin;
 
 /// The type of process accepted by aika. Processes are generators that yields a value of type `T` and returns `()`.
-pub type Process<T> = Box<dyn Generator<Yield = T, Return = ()> + Unpin>;
+pub type Process<T> = Box<dyn Generator<State<T>, Yield = T, Return = ()> + Unpin>;
 
 /// The type of function describing the event time delta for a given process. It can be constant, deterministic, or stochastic.
 pub enum ProcessExecution {
@@ -83,6 +83,7 @@ impl PartialEq for Event {
 
 impl Eq for Event {}
 
+#[derive(Clone)]
 pub struct State<T> {
     pub state: T,
     pub time: u64,
@@ -90,7 +91,7 @@ pub struct State<T> {
 
 /// The main struct of the library. It contains the `processes`, `events`, and `stores` of the
 /// simulation and keeps track of the current event time.
-pub struct Environment<T> {
+pub struct Environment<T: Clone> {
     /// The events to be executed.
     pub events: BinaryHeap<Reverse<Event>>,
     /// The processes and their id.
@@ -108,7 +109,7 @@ pub struct Environment<T> {
 }
 
 /// Implementation of the Environment struct. Contains public methods `new`, `add_process`, `run`.
-impl<T> Environment<T> {
+impl<T: Clone> Environment<T> {
     pub fn new(stop: u64, seed: u64, initial_state: T) -> Self {
         Environment {
             events: BinaryHeap::new(),
@@ -127,7 +128,7 @@ impl<T> Environment<T> {
     /// Add a new process to the simulation environment.
     pub fn add_process(
         &mut self,
-        process: Box<dyn Generator<Yield = T, Return = ()> + Unpin>,
+        process: Box<dyn Generator<State<T>, Yield = T, Return = ()> + Unpin>,
         time_delta: ProcessExecution,
         process_duration: ProcessDuration,
     ) {
@@ -180,10 +181,14 @@ impl<T> Environment<T> {
                 time_delta = distribution_sample.sample(&mut self.rng).round() as u64;
             }
         }
-        match process.resume(()) {
+        match process.resume(self.state.clone()) {
             GeneratorState::Yielded(val) => {
                 self.add_events(process_id, time_delta);
-                self.stores.push((self.time, val));
+                self.stores.push((self.time, val.clone()));
+                self.state = State {
+                    state: val,
+                    time: self.time,
+                };
                 self.time += 1;
             }
             GeneratorState::Complete(_output) => {}

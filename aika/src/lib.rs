@@ -14,11 +14,18 @@ mod test {
         let seed = 223u64;
 
         let mut env = Environment::new(100, seed, 0);
-        let process_random = Box::new(move || {
-            let mut i = 0;
+        let process_random = Box::new(move |state: State<i32>| {
+            let mut i = state.state;
             loop {
                 yield i;
-                i -= 1;
+                i += 1;
+            }
+        });
+        let process = Box::new(move |state: State<i32>| {
+            let mut i = state.state;
+            loop {
+                yield i;
+                i -= 2;
             }
         });
         // Execution Distribution
@@ -28,6 +35,11 @@ mod test {
             process_random,
             ProcessExecution::Stochastic(Box::new(gamma)),
             ProcessDuration::Finite(30, 60),
+        );
+        env.add_process(
+            process,
+            ProcessExecution::Constant(1),
+            ProcessDuration::Standard,
         );
         env.run();
         println!("{:?}", env.stores);
