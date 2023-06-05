@@ -186,7 +186,7 @@ impl<T: Clone> Environment<T> {
                 self.add_events(process_id, time_delta);
                 self.stores.push((self.time, val.clone()));
                 self.state = State {
-                    state: val,
+                    state: val.clone(),
                     time: self.time,
                 };
                 self.time += 1;

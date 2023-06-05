@@ -15,17 +15,17 @@ mod test {
 
         let mut env = Environment::new(100, seed, 0);
         let process_random = Box::new(move |state: State<i32>| {
-            let mut i = state.state;
             loop {
+                let mut i = state.state;
+                i += 3;
                 yield i;
-                i += 1;
             }
         });
         let process = Box::new(move |state: State<i32>| {
-            let mut i = state.state;
             loop {
+                let mut i = state.state;
+                i -= 1;
                 yield i;
-                i -= 2;
             }
         });
         // Execution Distribution
@@ -38,7 +38,7 @@ mod test {
         );
         env.add_process(
             process,
-            ProcessExecution::Constant(1),
+            ProcessExecution::Constant(3),
             ProcessDuration::Standard,
         );
         env.run();
