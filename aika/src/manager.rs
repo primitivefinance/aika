@@ -1,14 +1,14 @@
-use crate::environment::Environment;
+use crate::{environment::{Environment, EventYield}, resources::{Stores, Arithmetic}};
 
 /// The `Manager` struct is responsible for running a series of simulations and storing the results.
-pub struct Manager<T: Clone> {
+pub struct Manager<T: EventYield + Clone> {
     /// The number of simulations to run.
     pub simulations: Vec<Environment<T>>,
     /// The storage of simulation data
-    pub stores: Vec<Vec<(u64, T)>>,
+    pub stores: Vec<Vec<Stores<T>>>,
 }
 
-impl<T: Clone> Manager<T> {
+impl<T: EventYield + Clone + PartialOrd + Default + Arithmetic<T>> Manager<T> {
     /// Create a new `Manager` struct.
     pub fn new() -> Self {
         Manager {

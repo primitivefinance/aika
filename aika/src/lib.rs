@@ -3,6 +3,7 @@
 pub mod distribution;
 pub mod environment;
 pub mod manager;
+pub mod resources;
 
 #[cfg(test)]
 mod test {
@@ -13,35 +14,30 @@ mod test {
     fn setup_simple_des() {
         let seed = 223u64;
 
-        let mut env = Environment::new(100, seed, 0);
-        let process_random = Box::new(move |state: State<i32>| {
+        impl EventYield for f64 {
+            fn output(&self) -> Yield {
+                Yield::Pause
+            }
+            fn set(&mut self, output: Yield) {
+            }
+        }
+
+        let mut env = Environment::new(100, seed);
+
+        env.create_containers(1000f64, 300f64);
+        let process_random = Box::new(move |_| {
             loop {
-                let mut i = state.state;
-                i += 3;
+                let i = env.containers[0].get(1.0).unwrap();
                 yield i;
             }
         });
-        let process = Box::new(move |state: State<i32>| {
+        let process = Box::new(move |_| {
             loop {
-                let mut i = state.state;
-                i -= 1;
-                yield i;
+                env.containers[0].put(1.0);
+                yield 1.0;
             }
         });
         // Execution Distribution
         let gamma = Gamma::new(7.0, 1.0);
-
-        env.add_process(
-            process_random,
-            ProcessExecution::Stochastic(Box::new(gamma)),
-            ProcessDuration::Finite(30, 60),
-        );
-        env.add_process(
-            process,
-            ProcessExecution::Constant(3),
-            ProcessDuration::Standard,
-        );
-        env.run();
-        println!("{:?}", env.stores);
     }
 }

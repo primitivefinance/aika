@@ -2,7 +2,7 @@
 //! Distributions must enforce a sampling of only positive real numbers, as this describes a time delta moving forward.
 
 use rand::Rng;
-use rand_distr::{Gamma as GammaDistribution, Poisson as PoissonDistribution};
+use rand_distr::{Gamma as GammaDistribution, Poisson as PoissonDistribution, LogNormal as LogNormalDistribution};
 
 /// The `Distribution` trait allows for the creation of custom distributions to be used in the `ProcessExecution::Stochastic` variant.
 pub trait Distribution {
@@ -43,6 +43,25 @@ impl Gamma {
 }
 
 impl Distribution for Gamma {
+    fn sample(&self, rng: &mut rand::rngs::StdRng) -> f64 {
+        rng.sample(self.distribution)
+    }
+}
+
+/// The `LogNormal` struct implements the `Distribution` trait for the LogNormal distribution.
+pub struct LogNormal {
+    pub distribution: LogNormalDistribution<f64>,
+}
+
+impl LogNormal {
+    pub fn new(mean: f64, std_dev: f64) -> LogNormal {
+        Self {
+            distribution: LogNormalDistribution::new(mean, std_dev).unwrap(),
+        }
+    }
+}
+
+impl Distribution for LogNormal {
     fn sample(&self, rng: &mut rand::rngs::StdRng) -> f64 {
         rng.sample(self.distribution)
     }
